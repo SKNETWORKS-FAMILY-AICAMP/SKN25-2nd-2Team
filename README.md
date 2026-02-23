@@ -40,6 +40,7 @@
   - Streamlit
   - Folium
   - Matplotlib
+  - Seaborn
 
 # 5. 수행결과
 
