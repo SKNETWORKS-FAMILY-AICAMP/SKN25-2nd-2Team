@@ -19,13 +19,27 @@
 ## ❤️ 기대효과
 - 2026, 2027년 소멸위험지수가 높은 지역 예측
 - 소멸위험지수에 높은 영향을 미치는 요인 도출
-- 시각화를 통한 분석 결과 공
+- 시각화를 통한 분석 결과 공유
   
 ## 👤 대상 사용자
 - 중앙부처의 인구 대응 TF
 - 각 지자체의 정책 입안자 및 예산 담당자 등
 
 # 4. 기술 스택
+- **Language**
+  - Python
+
+- **Data Preprocessing**
+  - Pandas
+  - Numpy
+
+- **Machine Learning**
+  - scikit-learn
+
+- **Visualization**
+  - Streamlit
+  - Folium
+  - Matplotlib
 
 # 5. 수행결과
 
