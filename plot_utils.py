@@ -22,19 +22,25 @@ plt.rc('axes', unicode_minus=False)
 os.makedirs('plots', exist_ok=True)
 
 # --- 2. 시각화 함수 정의 ---
-def plot_target_kde(df):
-    """Target(개선인구소멸지수)의 연도별 KDE 히스토그램 출력 및 저장"""
-    target_col = df.columns[11]
-    year_col = df.columns[5]
+def plot_target_boxplot(df):
+    """Target(개선인구소멸지수)의 연도별 Boxplot 출력 및 저장"""
+    # 기존 코드의 컬럼 인덱스를 그대로 활용
+    target_col = df.columns[11]  
+    year_col = df.columns[5]     
     
     fig, ax = plt.subplots(figsize=(12, 6))
-    sns.histplot(data=df, x=target_col, hue=year_col, palette='autumn', alpha=0.6, kde=True, bins=30, ax=ax)
+    
+    # KDE 대신 Boxplot 적용, ax 객체에 바로 그리기
+    sns.boxplot(data=df, x=year_col, y=target_col, palette='husl', ax=ax)
+    
+    # ax 객체를 사용하여 Title, Label, Y-limit 설정
     ax.set_title(f'연도별 [{target_col}] 분포', fontsize=16)
-    ax.set_xlabel('개선 인구 소멸 지수', fontsize=12)
-    ax.set_ylabel('빈도 (Count)', fontsize=12)
+    ax.set_xlabel('연도', fontsize=12)
+    ax.set_ylabel('개선 인구 소멸 지수', fontsize=12)
+    ax.set_ylim(bottom=0)
     
     # PPT용 저장 및 Streamlit 출력
-    plt.savefig('plots/1_target_kde_distribution.png', dpi=300, bbox_inches='tight')
+    plt.savefig('plots/1_target_boxplot_distribution.png', dpi=300, bbox_inches='tight')
     st.pyplot(fig)
     plt.close(fig)
 
