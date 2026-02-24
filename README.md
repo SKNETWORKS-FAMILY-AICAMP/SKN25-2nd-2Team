@@ -1,7 +1,8 @@
 # SKN25-2nd-2Team
 
 # 1. 팀 소개
-<img width="500" height="500" alt="team2" src="https://github.com/user-attachments/assets/714c14b1-d577-4b59-bed9-859ed8062880" />
+<img width="421" height="363" alt="화면 캡처 2026-02-24 093932" src="https://github.com/user-attachments/assets/65a1ff07-aaf8-44a5-a680-a0474b1e0903" />
+
 
 # 2. 프로젝트 기간
 2026.02.23. - 2026.02.24.
