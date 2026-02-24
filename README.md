@@ -47,6 +47,8 @@
 # 5. 수행결과
 
 ## 1️⃣ ERD
+<img width="624" height="825" alt="ERD_" src="https://github.com/user-attachments/assets/5f616ace-37fd-43d4-948d-e712fae8fc60" />
+
 
 ## 2️⃣ 분석 결과
 
