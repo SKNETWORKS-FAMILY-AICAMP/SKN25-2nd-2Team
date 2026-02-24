@@ -1,2 +1,12 @@
 # macOS
 .DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Model files
+analysis/lgbm_model.joblib

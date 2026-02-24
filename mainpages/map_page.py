@@ -1,247 +1,388 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import folium
 from streamlit_folium import st_folium
 import json
 import shap
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import platform
-import os
+import re
 
-# SHAP 시각화 함수 임포트 (경로에 따라 수정 필요)
-# Assuming utils is a package or directly accessible
-try:
-    from src.explainer import show_shap_waterfall_plot
-except ImportError:
-    st.error("Could not import show_shap_waterfall_plot. Make sure src/explainer.py is accessible.")
-    show_shap_waterfall_plot = None
 
-# 한글 폰트 설정 (Streamlit 환경에 맞게 조정)
+# ──────────────────────────────────────────
+# 유틸 함수
+# ──────────────────────────────────────────
+
 def set_korean_font():
-    if platform.system() == 'Windows':
-        plt.rcParams['font.family'] = 'Malgun Gothic'
-    elif platform.system() == 'Darwin': # Mac
+    if platform.system() == 'Darwin':
         plt.rcParams['font.family'] = 'AppleGothic'
-    else: # Linux (e.g. Streamlit Cloud)
-        # 나눔 폰트 설치 및 설정 (Streamlit Cloud 환경을 위한 예시)
-        # 이 부분은 Streamlit 앱 배포 시 추가적인 설정이 필요할 수 있습니다.
-        # 예를 들어, Dockerfile에 폰트 설치 명령 추가 등
+    elif platform.system() == 'Windows':
+        plt.rcParams['font.family'] = 'Malgun Gothic'
+    else:
         try:
             plt.rcParams['font.family'] = 'NanumGothic'
         except:
-            st.warning("나눔고딕 폰트를 찾을 수 없습니다. 기본 폰트로 대체합니다.")
             plt.rcParams['font.family'] = 'sans-serif'
-    plt.rcParams['axes.unicode_minus'] = False # 마이너스 기호 깨짐 방지
+    plt.rcParams['axes.unicode_minus'] = False
 
 set_korean_font()
 
-# --- 데이터 로드 및 전처리 함수 ---
-@st.cache_data
-def load_geojson(path):
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            geojson_data = json.load(f)
-        return geojson_data
-    except FileNotFoundError:
-        st.error(f"GeoJSON 파일을 찾을 수 없습니다: {path}")
-        return None
-    except json.JSONDecodeError:
-        st.error(f"GeoJSON 파일 형식이 올바르지 않습니다: {path}")
-        return None
 
-# --- 인구 소멸 지수 등급 분류 함수 ---
+def extract_city_name(gu_name):
+    first = gu_name.split(',')[0].strip()
+    if '세종' in first:
+        return '세종특별자치시'
+    match = re.match(r'^(.+?시)(?=[가-힣])', first)
+    if match:
+        return match.group(1)
+    match = re.match(r'^(.+?시)\s', first)
+    if match:
+        return match.group(1)
+    match = re.match(r'^(.+?시)$', first)
+    if match:
+        return match.group(1)
+    match = re.match(r'^(.+?군)', first)
+    if match:
+        return match.group(1)
+    return first
+
+
 def classify_extinction_index(score):
-    # score가 유효한 숫자가 아닌 경우 기본값 반환
     if pd.isna(score):
-        return "알 수 없음", "#808080" # 회색
-    
-    if score <= 0.5: # 예시 기준, 실제 기준은 데이터 분포에 따라 조정 필요
-        return "고위험", "#FF0000"  # 진한 빨강
-    elif score <= 1.0:
-        return "위험", "#FFA500"    # 주황
+        return "알 수 없음", "#808080"
+    if score <= 1.1:
+        return "고위험", "#d73027"
     elif score <= 1.5:
-        return "주의", "#FFFF00"    # 노랑
+        return "위험", "#fc8d59"
+    elif score <= 2.0:
+        return "주의", "#fee08b"
     else:
-        return "보통", "#008000"    # 초록
+        return "보통", "#1a9850"
+
+
+def get_grade_emoji(grade):
+    return {"고위험": "🔴", "위험": "🟠", "주의": "🟡", "보통": "🟢"}.get(grade, "⚪")
+
+
+# ──────────────────────────────────────────
+# SHAP 차트
+# ──────────────────────────────────────────
+
+def render_shap_chart(model, final_df, selected_year, selected_region, X_train):
+    X_cols = X_train.columns.tolist()
+    target = final_df[
+        (final_df['year'] == selected_year) &
+        (final_df['sigun_nm'] == selected_region)
+    ][X_cols]
+
+    if target.empty:
+        st.warning("SHAP 분석 데이터를 찾을 수 없습니다.")
+        return
+
+    with st.spinner("SHAP 분석 중..."):
+        if 'shap_explainer' not in st.session_state:
+            st.session_state.shap_explainer = shap.TreeExplainer(model)
+        explainer = st.session_state.shap_explainer
+        shap_values = explainer(target)
+
+    vals = shap_values.values[0]
+    feat_vals = target.values[0]
+    indices = np.argsort(np.abs(vals))[-10:]
+    top_vals = vals[indices]
+    top_feat_labels = [f"{X_cols[i]}  (= {feat_vals[i]:.1f})" for i in indices]
+    colors = ['#2196F3' if v > 0 else '#F44336' for v in top_vals]
+
+    fig, ax = plt.subplots(figsize=(11, 7))
+    fig.patch.set_facecolor('#f8f9fa')
+    ax.set_facecolor('#f8f9fa')
+
+    bars = ax.barh(top_feat_labels, top_vals, color=colors,
+                   height=0.6, edgecolor='white', linewidth=0.5)
+
+    for bar, val in zip(bars, top_vals):
+        offset = 0.008 if val > 0 else -0.008
+        ax.text(
+            val + offset,
+            bar.get_y() + bar.get_height() / 2,
+            f'{val:+.3f}',
+            va='center',
+            ha='left' if val > 0 else 'right',
+            fontsize=10,
+            fontweight='bold',
+            color='#2196F3' if val > 0 else '#F44336'
+        )
+
+    ax.axvline(x=0, color='#333333', linewidth=1.2, linestyle='--', alpha=0.6)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.tick_params(axis='y', labelsize=10)
+    ax.tick_params(axis='x', labelsize=9)
+
+    legend_handles = [
+        mpatches.Patch(facecolor='#2196F3', label='소멸 위험 감소 (긍정적 영향)'),
+        mpatches.Patch(facecolor='#F44336', label='소멸 위험 증가 (부정적 영향)')
+    ]
+    ax.legend(handles=legend_handles, loc='lower right', fontsize=10,
+              framealpha=0.9, edgecolor='#cccccc')
+    ax.set_title(
+        f'{selected_year}년 {selected_region} — SHAP 변수 영향도 분석',
+        fontsize=13, fontweight='bold', pad=15, color='#1a1a2e'
+    )
+    ax.set_xlabel('SHAP 값  (← 위험 증가  |  위험 감소 →)', fontsize=10, color='#555555')
+    ax.grid(axis='x', alpha=0.2, linestyle='--')
+    plt.tight_layout()
+    st.pyplot(fig)
+    plt.close(fig)
+
+
+# ──────────────────────────────────────────
+# 메인 페이지
+# ──────────────────────────────────────────
 
 def map_page():
-    st.title("전국 시군구 주민 이탈 예측 지도")
 
-    # --- 세션 상태 확인 ---
+    st.markdown("""
+    <style>
+        .main-title {
+            font-size: 2rem; font-weight: 800;
+            color: #1a1a2e; margin-bottom: 0.2rem;
+        }
+        .sub-title {
+            font-size: 1rem; color: #666; margin-bottom: 1.5rem;
+        }
+        .metric-card {
+            background: white; border-radius: 12px;
+            padding: 1.2rem 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center;
+        }
+        .metric-label { font-size: 0.85rem; color: #888; margin-bottom: 0.3rem; }
+        .metric-value { font-size: 1.6rem; font-weight: 700; color: #1a1a2e; }
+        .legend-row {
+            display: flex; gap: 1rem; align-items: center;
+            flex-wrap: wrap; margin-bottom: 0.8rem;
+        }
+        .legend-item {
+            display: flex; align-items: center;
+            gap: 0.3rem; font-size: 0.85rem; color: #444;
+        }
+        .legend-dot {
+            width: 12px; height: 12px;
+            border-radius: 50%; display: inline-block;
+        }
+        .section-header {
+            font-size: 1.2rem; font-weight: 700; color: #1a1a2e;
+            padding: 0.5rem 0; border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 1rem;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # ── 세션 확인 ──
     if 'final_df' not in st.session_state or st.session_state.final_df.empty:
-        st.warning("데이터가 로드되지 않았습니다. '데이터 로드' 페이지에서 데이터를 먼저 로드해주세요.")
+        st.warning("⚠️ 데이터가 로드되지 않았습니다.")
         return
     if 'model' not in st.session_state:
-        st.warning("모델이 학습되지 않았습니다. '모델 학습' 페이지에서 모델을 먼저 학습시켜주세요.")
+        st.warning("⚠️ 모델이 학습되지 않았습니다.")
         return
     if 'X_train' not in st.session_state or st.session_state.X_train.empty:
-        st.warning("SHAP 분석을 위한 X_train 데이터가 없습니다. '데이터 로드' 페이지에서 데이터를 먼저 로드해주세요.")
+        st.warning("⚠️ X_train 데이터가 없습니다.")
         return
 
     final_df = st.session_state.final_df
     model = st.session_state.model
     X_train = st.session_state.X_train
 
-    # --- 연도 선택 바 ---
-    years = sorted(final_df['year'].unique())
-    selected_year = st.sidebar.radio("연도 선택", years, index=years.index(2024) if 2024 in years else 0)
+    if 'selected_region' not in st.session_state:
+        st.session_state.selected_region = None
 
-    st.subheader(f"{selected_year}년 전국 시군구 주민 이탈 예측")
+    # ── 타이틀 ──
+    st.markdown('<div class="main-title">🗺️ 전국 주민 이탈 예측 지도</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">지역을 클릭하거나 검색하면 SHAP 분석 결과를 확인할 수 있습니다.</div>', unsafe_allow_html=True)
 
-    # --- GeoJSON 데이터 로드 ---
-    geojson_path = "data/sigungu_excel_matched.geojson"
-    geojson_data = load_geojson(geojson_path)
+    # ── 상단 컨트롤: 연도 슬라이더 + 지역 검색 ──
+    col_year, col_search = st.columns([2, 1])
 
-    if geojson_data is None:
-        return
+    with col_year:
+        years = sorted([int(y) for y in final_df['year'].unique()])
+        selected_year = st.select_slider(
+            "📅 연도 선택",
+            options=years,
+            value=2024
+        )
 
-    # --- 선택된 연도 데이터 필터링 및 등급 분류 ---
+    with col_search:
+        all_regions = sorted(final_df['sigun_nm'].unique().tolist())
+        search_region = st.selectbox(
+            "🔍 지역 검색",
+            options=["선택 안 함"] + all_regions,
+            index=0
+        )
+        if search_region != "선택 안 함":
+            st.session_state.selected_region = search_region
+
+    # ── 등급 범례 ──
+    st.markdown("""
+    <div class="legend-row">
+        <span style="font-size:0.85rem; color:#555; font-weight:600;">등급 기준 :</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#d73027;"></span> 고위험 (1.1 이하)</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#fc8d59;"></span> 위험 (1.1 ~ 1.5)</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#fee08b;"></span> 주의 (1.5 ~ 2.0)</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#1a9850;"></span> 보통 (2.0 초과)</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── 데이터 필터링 ──
     df_year = final_df[final_df['year'] == selected_year].copy()
-    
     if df_year.empty:
-        st.warning(f"{selected_year}년에 대한 데이터가 없습니다. 다른 연도를 선택해주세요.")
+        st.warning(f"{selected_year}년 데이터가 없습니다.")
         return
 
-    # GeoJSON의 sigun_cd와 DataFrame의 sigun_nm을 매핑하기 위한 전처리
-    # GeoJSON의 properties에서 'sigun_cd'를 찾고, df_year의 'sigun_nm'과 매핑
-    # GeoJSON의 'sigun_cd'는 숫자형, df_year의 'sigun_nm'은 문자열일 수 있으므로 통일 필요
-    # 여기서는 GeoJSON의 'sigun_cd'를 기준으로 df_year에 'sigun_cd' 컬럼을 추가하는 방식으로 진행
-    
-    # GeoJSON의 'sigun_cd'와 'sigun_nm' 매핑 딕셔너리 생성
-    geojson_sigungu_map = {}
+    classified = df_year['개선 인구 소멸 지수'].apply(classify_extinction_index)
+    df_year['등급'] = classified.apply(lambda x: x[0])
+    df_year['색상'] = classified.apply(lambda x: x[1])
+    df_year['sigun_nm'] = df_year['sigun_nm'].replace('세종시', '세종특별자치시')
+
+    # ── GeoJSON 로드 및 병합 ──
+    try:
+        with open("data/sigungu_excel_matched.geojson", 'r', encoding='utf-8') as f:
+            geojson_data = json.load(f)
+    except FileNotFoundError:
+        st.error("GeoJSON 파일을 찾을 수 없습니다.")
+        return
+
+    sigun_dict = (
+        df_year.drop_duplicates(subset=['sigun_nm'])
+        .set_index('sigun_nm')[['개선 인구 소멸 지수', '등급']]
+        .to_dict('index')
+    )
     for feature in geojson_data['features']:
-        props = feature['properties']
-        # GeoJSON에 'sigun_nm'이 없으면 'source_SIG_KOR_NM'을 사용
-        region_name_in_geojson = props.get('sigun_nm')
-        if not region_name_in_geojson: # sigun_nm이 없으면 source_SIG_KOR_NM 시도
-            region_name_in_geojson = props.get('source_SIG_KOR_NM')
+        original_name = feature['properties'].get('source_SIG_KOR_NM', '')
+        city_name = extract_city_name(original_name)
+        feature['properties']['city_nm'] = city_name
+        if city_name in sigun_dict:
+            feature['properties']['개선 인구 소멸 지수'] = round(
+                sigun_dict[city_name]['개선 인구 소멸 지수'], 4)
+            feature['properties']['등급'] = sigun_dict[city_name]['등급']
+        else:
+            feature['properties']['개선 인구 소멸 지수'] = '데이터 없음'
+            feature['properties']['등급'] = '데이터 없음'
 
-        if 'sigun_cd' in props and region_name_in_geojson:
-            geojson_sigungu_map[str(region_name_in_geojson)] = str(props['sigun_cd']) # region_name을 키로, sigun_cd를 값으로
-
-    # df_year에 'sigun_cd' 컬럼 추가
-    df_year['sigun_cd'] = df_year['sigun_nm'].map(geojson_sigungu_map)
-    df_year.dropna(subset=['sigun_cd'], inplace=True) # 매핑되지 않은 지역 제거
-
-    # '개선 인구 소멸 지수' 컬럼의 NaN 값 처리 (classify_extinction_index 함수에서 처리)
-    if '개선 인구 소멸 지수' not in df_year.columns:
-        st.error("데이터에 '개선 인구 소멸 지수' 컬럼이 없습니다.")
-        return
-
-    # 인구 소멸 지수 등급 및 색상 적용
-    # apply 함수가 Series를 반환하도록 명시적으로 처리
-    classified_data = df_year['개선 인구 소멸 지수'].apply(lambda x: classify_extinction_index(x))
-    df_year['등급'] = classified_data.apply(lambda x: x[0])
-    df_year['색상'] = classified_data.apply(lambda x: x[1])
-
-    # --- Folium 지도 생성 ---
+    # ── 지도 생성 ──
     m = folium.Map(location=[36.5, 127.5], zoom_start=7, tiles="cartodbpositron")
 
-    # Choropleth 레이어 추가
-    # 기존 Choropleth 레이어와 툴팁 추가 로직을 통합
-    choropleth = folium.Choropleth(
+    folium.Choropleth(
         geo_data=geojson_data,
-        data=df_year,
-        columns=['sigun_cd', '개선 인구 소멸 지수'],
-        key_on='feature.properties.sigun_cd',
-        fill_color='YlOrRd', # 색상 스케일 (예: 노랑-주황-빨강)
-        fill_opacity=0.7,
+        data=df_year.drop_duplicates(subset=['sigun_nm']),
+        columns=['sigun_nm', '개선 인구 소멸 지수'],
+        key_on='feature.properties.city_nm',
+        fill_color='RdYlGn',
+        fill_opacity=0.75,
         line_opacity=0.2,
-        legend_name=f'{selected_year}년 개선 인구 소멸 지수',
-        highlight=True,
-        name='Choropleth'
+        legend_name='개선 인구 소멸 지수',
+        nan_fill_color='lightgray'
     ).add_to(m)
 
-    # Choropleth에 툴팁 추가
-    # GeoJSON 데이터의 'source_SIG_KOR_NM'과 df_year의 '개선 인구 소멸 지수', '등급'을 매핑하여 툴팁 생성
-    choropleth.geojson.add_child(
-        folium.features.GeoJsonTooltip(
-            fields=['source_SIG_KOR_NM', '개선 인구 소멸 지수', '등급'],
-            aliases=['지역', '개선 인구 소멸 지수', '등급'],
+    folium.GeoJson(
+        geojson_data,
+        name='clickable',
+        style_function=lambda x: {'fillOpacity': 0, 'weight': 0.5, 'color': '#999'},
+        highlight_function=lambda x: {
+            'fillOpacity': 0.35, 'weight': 2.5,
+            'color': '#1a1a2e', 'fillColor': '#ffeb3b'
+        },
+        tooltip=folium.GeoJsonTooltip(
+            fields=['city_nm', '개선 인구 소멸 지수', '등급'],
+            aliases=['📍 지역', '📊 소멸 지수', '🏷️ 등급'],
             localize=True,
-            labels=True,
-            sticky=False,
-            style="background-color: #F0EFE9; color: #333333; font-family: arial; font-size: 12px; padding: 10px;"
+            sticky=True,
+            style="font-family: sans-serif; font-size: 13px;"
+        ),
+        popup=folium.GeoJsonPopup(
+            fields=['city_nm'],
+            aliases=['지역'],
+            localize=True
         )
-    )
+    ).add_to(m)
 
-    # --- Streamlit에 Folium 지도 렌더링 ---
-    st.session_state.selected_region = None # 초기화
-    map_output = st_folium(m, width=700, height=500, returned_objects=["last_active_drawing", "last_object_clicked"])
+    # ── 지도 렌더링 ──
+    map_output = st_folium(m, width="100%", height=580,
+                           returned_objects=["last_object_clicked_popup"])
 
-    # --- 지역 클릭 인터랙션 처리 ---
-    if map_output and map_output["last_object_clicked"]:
-        clicked_region_props = map_output["last_object_clicked"]["properties"]
-        # GeoJSON의 'source_SIG_KOR_NM'을 사용하여 클릭된 지역명 가져오기
-        clicked_sigun_nm = clicked_region_props.get('source_SIG_KOR_NM')
-        
-        if clicked_sigun_nm:
-            st.session_state.selected_region = clicked_sigun_nm
-            st.sidebar.write(f"선택된 지역: **{st.session_state.selected_region}**")
+    # ── 클릭 이벤트 처리 ──
+    popup_data = map_output.get('last_object_clicked_popup')
+    if popup_data:
+        if isinstance(popup_data, str):
+            region_name = popup_data.replace('지역', '').strip()
+            if region_name:
+                st.session_state.selected_region = region_name
+        elif isinstance(popup_data, dict):
+            region_name = popup_data.get('city_nm') or popup_data.get('지역')
+            if region_name:
+                st.session_state.selected_region = region_name
 
-            # 선택된 지역의 데이터 가져오기
-            region_data_for_shap = df_year[df_year['sigun_nm'] == clicked_sigun_nm]
+    # ── SHAP 분석 패널 ──
+    if st.session_state.selected_region:
+        selected_region = st.session_state.selected_region
+        region_data = df_year[df_year["sigun_nm"] == selected_region]
 
-            if not region_data_for_shap.empty:
-                extinction_score = region_data_for_shap['개선 인구 소멸 지수'].iloc[0]
-                grade = region_data_for_shap['등급'].iloc[0]
-                color = region_data_for_shap['색상'].iloc[0]
+        st.markdown("---")
+        st.markdown(
+            f'<div class="section-header">📍 {selected_region} 상세 분석 ({selected_year}년)</div>',
+            unsafe_allow_html=True
+        )
 
-                st.subheader(f"'{clicked_sigun_nm}' ({selected_year}년) 상세 분석")
-                st.markdown(f"**개선 인구 소멸 지수:** {extinction_score:.2f} (등급: <span style='color:{color};'><b>{grade}</b></span>)", unsafe_allow_html=True)
+        # 분석 시작 전 안내 메시지
+        status_placeholder = st.empty()
+        status_placeholder.info("⏳ SHAP 분석 중입니다. 잠시만 기다려 주세요...")
 
-                # SHAP 분석을 위한 X 변수 추출
-                # X_train의 컬럼 순서와 모델 학습 시 사용된 컬럼 순서가 동일하다고 가정
-                X_region_year = X_train[(X_train['sigun_nm'] == clicked_sigun_nm) & (X_train['year'] == selected_year)]
-                
-                if not X_region_year.empty:
-                    # 'sigun_nm', 'year' 컬럼 제외하고 모델 입력에 사용될 피처만 추출
-                    features_for_model = X_region_year.drop(columns=['sigun_nm', 'year'], errors='ignore')
-                    
-                    if show_shap_waterfall_plot:
-                        st.write("---")
-                        st.subheader("SHAP Waterfall Plot")
-                        # show_shap_waterfall_plot 함수는 내부적으로 explainer를 생성하고 플롯을 그림
-                        # X_target은 단일 샘플 (Series 또는 DataFrame)이어야 함
-                        show_shap_waterfall_plot(model, features_for_model.iloc[0]) # 첫 번째 행 (단일 샘플) 전달
-                        st.pyplot(plt) # matplotlib 그림을 Streamlit에 표시
-                        plt.clf() # 그림 초기화
+        if not region_data.empty:
+            extinction_score = region_data['개선 인구 소멸 지수'].iloc[0]
+            grade = region_data['등급'].iloc[0]
+            color = region_data['색상'].iloc[0]
+            emoji = get_grade_emoji(grade)
 
-                        # SHAP 상위 2개 변수 요약
-                        explainer = shap.TreeExplainer(model)
-                        shap_values = explainer.shap_values(features_for_model.iloc[0])
-                        
-                        # LightGBM의 경우 shap_values가 리스트로 반환될 수 있음 (클래스별)
-                        # 이진 분류의 경우 보통 두 번째 요소 (클래스 1에 대한 shap_values)를 사용
-                        if isinstance(shap_values, list):
-                            shap_values = shap_values[1] # Assuming binary classification, focus on positive class
+            # 지표 카드 3개
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-label">개선 인구 소멸 지수</div>
+                    <div class="metric-value">{extinction_score:.4f}</div>
+                </div>""", unsafe_allow_html=True)
+            with c2:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-label">소멸 위험 등급</div>
+                    <div class="metric-value">
+                        <span style="color:{color};">{emoji} {grade}</span>
+                    </div>
+                </div>""", unsafe_allow_html=True)
+            with c3:
+                rank_df = df_year.sort_values('개선 인구 소멸 지수')
+                region_list = rank_df['sigun_nm'].tolist()
+                rank = region_list.index(selected_region) + 1 \
+                    if selected_region in region_list else '-'
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-label">전국 위험 순위</div>
+                    <div class="metric-value">{rank}위 / {len(rank_df)}개</div>
+                </div>""", unsafe_allow_html=True)
 
-                        shap_df = pd.DataFrame({
-                            'feature': features_for_model.columns,
-                            'shap_value': shap_values
-                        })
-                        shap_df['abs_shap_value'] = shap_df['shap_value'].abs()
-                        shap_df = shap_df.sort_values(by='abs_shap_value', ascending=False).head(2)
+            st.markdown("<br>", unsafe_allow_html=True)
 
-                        st.write("---")
-                        st.subheader("SHAP 분석 요약")
-                        if not shap_df.empty:
-                            for index, row in shap_df.iterrows():
-                                feature_name = row['feature']
-                                shap_value = row['shap_value']
-                                effect = "증가" if shap_value > 0 else "감소"
-                                st.markdown(f"- **{feature_name}**: 이 요인이 주민 이탈 지수 예측에 **{effect}** 영향을 미쳤습니다. (SHAP 값: {shap_value:.2f})")
-                        else:
-                            st.write("SHAP 상위 변수를 찾을 수 없습니다.")
-                    else:
-                        st.error("SHAP 시각화 함수를 로드할 수 없어 SHAP 분석을 수행할 수 없습니다.")
-                else:
-                    st.warning(f"선택된 '{clicked_sigun_nm}' ({selected_year}년)에 대한 SHAP 분석 데이터(X_train)를 찾을 수 없습니다.")
-            else:
-                st.warning(f"선택된 '{clicked_sigun_nm}' ({selected_year}년)에 대한 데이터가 없습니다.")
-            
-            # st.session_state.selected_region = None # SHAP 분석 후 선택 초기화 (필요에 따라)
+            # SHAP 차트
+            st.markdown('<div class="section-header">🔬 SHAP 변수 영향도 분석</div>',
+                        unsafe_allow_html=True)
+            st.caption("각 변수가 소멸 지수 예측에 얼마나 영향을 미쳤는지 나타냅니다. 파란색은 위험 감소, 빨간색은 위험 증가 방향입니다.")
+            render_shap_chart(model, final_df, selected_year, selected_region, X_train)
+            status_placeholder.empty()  # 분석 완료 후 안내 메시지 제거
 
-# 페이지 실행
+        else:
+            st.warning(f"'{selected_region}' 데이터를 찾을 수 없습니다.")
+
+
 if __name__ == "__main__":
     map_page()
