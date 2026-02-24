@@ -1,7 +1,7 @@
 # SKN25-2nd-2Team
 
 # 1. 팀 소개
-<img width="825" height="825" alt="ChatGPT_Image_2026_2_23_03_09_13" src="https://github.com/user-attachments/assets/714c14b1-d577-4b59-bed9-859ed8062880" />
+<img width="500" height="500" alt="team2" src="https://github.com/user-attachments/assets/714c14b1-d577-4b59-bed9-859ed8062880" />
 
 # 2. 프로젝트 기간
 2026.02.23. - 2026.02.24.
