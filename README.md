@@ -66,6 +66,10 @@
 
 
 ## 2️⃣ 분석 결과
+<img width="960" height="540" alt="16" src="https://github.com/user-attachments/assets/4de91cec-d731-4120-b668-fea7dd1ffa3f" />
+<img width="960" height="540" alt="17" src="https://github.com/user-attachments/assets/a4e68255-581f-42a1-a240-30b3b36e7db6" />
+<img width="960" height="540" alt="18" src="https://github.com/user-attachments/assets/4c64caac-6e44-4897-a908-1326367d976c" />
+
 
 ## 3️⃣ 대시보드
 
