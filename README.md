@@ -6,11 +6,13 @@
 
 | 담당자 | 역할 |
 |---|---|
-| 권가영 |  데이터 수집 및 전처리, 모델링, streamlit 구현 |
-| 여해준 |  데이터 수집 및 전처리 |
-| 유행운 |  데이터 수집 및 전처리 |
-| 전운열 |  데이터 전처리, 모델 구현, 시각화 생성 |
-| 조은석 |  데이터 수집, ppt 작성|
+| 이름 | GitHub | 역할 |
+| :--- | :---: | :--- |
+| 권가영 | [@Gayoung03](https://github.com/Gayoung03) | 데이터 수집 및 전처리, 모델링, streamlit 구현 |
+| 여해준 | [@아이디](https://github.com/아이디) | 데이터 수집 및 전처리 |
+| 유행운 | [@아이디](https://github.com/아이디) | 데이터 수집 및 전처리 |
+| 전운열 | [@아이디](https://github.com/아이디) | 데이터 전처리, 모델 구현, 시각화 생성 |
+| 조은석 | [@아이디](https://github.com/아이디) | 데이터 수집, ppt 작성 |
 
 # 2. 프로젝트 기간
 2026.02.23. - 2026.02.24.
@@ -37,20 +39,20 @@
 
 # 4. 기술 스택
 - **Language**
-  - Python
+  - ![Python](https://img.shields.io/badge/python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
 - **Data Preprocessing**
-  - Pandas
-  - Numpy
+  - ![Pandas](https://img.shields.io/badge/pandas-%23150458.svg?style=for-the-badge&logo=pandas&logoColor=white)
+  - ![NumPy](https://img.shields.io/badge/numpy-%23013243.svg?style=for-the-badge&logo=numpy&logoColor=white)
 
 - **Machine Learning**
-  - scikit-learn
+  - ![scikit-learn](https://img.shields.io/badge/scikit--learn-%23F7931E.svg?style=for-the-badge&logo=scikit-learn&logoColor=white)
 
 - **Visualization**
-  - Streamlit
-  - Folium
-  - Matplotlib
-  - Seaborn
+  - ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white)
+  - ![Folium](https://img.shields.io/badge/Folium-77B829?style=for-the-badge&logo=Leaflet&logoColor=white)
+  - ![Matplotlib](https://img.shields.io/badge/Matplotlib-%23ffffff.svg?style=for-the-badge&logo=Matplotlib&logoColor=black)
+  - ![Seaborn](https://img.shields.io/badge/Seaborn-%234479A1.svg?style=for-the-badge&logo=Seaborn&logoColor=white)
 
 # 5. 수행결과
 
