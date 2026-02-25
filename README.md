@@ -123,8 +123,8 @@ SKN25-2nd-2Team/
 
 
 ## 2️⃣ 분석 결과
-<img width="960" height="540" alt="16" src="https://github.com/user-attachments/assets/4de91cec-d731-4120-b668-fea7dd1ffa3f" />
-<img width="960" height="540" alt="17" src="https://github.com/user-attachments/assets/a4e68255-581f-42a1-a240-30b3b36e7db6" />
+<img width="1846" height="1708" alt="Image" src="https://github.com/user-attachments/assets/027e2d59-f3f2-46ff-8fae-5585c37a9746" />
+<img width="1846" height="1708" alt="Image" src="https://github.com/user-attachments/assets/67cec9b8-32aa-442f-bed7-1a42e3ef1c9a" />
 
 ## 3️⃣ 아쉬운 점 및 향후 개선 방향
 1. 데이터 범위: 5개년 연단위 데이터의 한계를 극복하기 위해 분기/월 단위 세밀한 데이터 및 외부 지표 추가 필요.
