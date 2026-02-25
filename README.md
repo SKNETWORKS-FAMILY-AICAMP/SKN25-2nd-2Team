@@ -10,7 +10,7 @@
 | 여해준 | [@아이디](https://github.com/아이디) | 데이터 수집 및 전처리 |
 | 유행운 | [@happyhippo-cmd](https://github.com/아이디) | 데이터 수집 및 전처리 |
 | 전운열 | [@아이디](https://github.com/아이디) | 데이터 전처리, 모델 구현, 시각화 생성 |
-| 조은석 | [@아이디](https://github.com/아이디) | 데이터 수집, ppt 작성 |
+| 조은석 | [@silverstone-1004](https://github.com/silverstone-1004) | 데이터 수집, ppt 작성 |
 
 # 2. 프로젝트 기간
 2026.02.23. - 2026.02.24.
