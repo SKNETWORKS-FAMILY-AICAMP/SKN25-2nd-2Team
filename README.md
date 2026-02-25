@@ -81,6 +81,44 @@
 
 ## 1️⃣ ERD
 <img width="624" height="825" alt="ERD_" src="https://github.com/user-attachments/assets/5f616ace-37fd-43d4-948d-e712fae8fc60" />
+<br>
+
+### 자료 구조
+```
+SKN25-2nd-2Team/
+├── README.md                # 프로젝트 설명서
+├── requirements.txt         # 설치해야 할 도구 리스트
+├── main.py                  # 프로그램 시작 버튼
+├── app.py                   # 웹 화면 메인 엔진 (Streamlit)
+├── sidebar.py               # 옆구리 메뉴 바 설정
+├── src/                     # 핵심 계산 기계들이 들어있는 방
+│   ├── init.py          # 방을 열어주는 열쇠
+│   ├── data_loader.py       # 데이터를 불러오는 기계
+│   ├── feature_forecaster.py # 미래를 예측하는 기계
+│   ├── model_trainer.py     # 인공지능을 공부시키는 기계
+│   └── explainer.py         # 왜 그렇게 생각했는지 설명하는 기계
+├── mainpages/               # 웹사이트의 개별 방들
+│   ├── init.py
+│   ├── eda_page.py          # 데이터를 분석해서 보여주는 방
+│   └── mappage.py          # 지도를 보여주는 방
+├── data/                    # 재료 창고 (데이터)
+│   ├── 최종전처리완료.csv     # 깨끗하게 닦아놓은 데이터
+│   ├── sigungu_excel_matched.geojson # 지도 그림용 파일
+│   ├── eda.ipynb            # 데이터 연습장
+│   └── Fonts/               # 글씨체 보관함 (malgun.ttf)
+├── analysis/                # 실험 결과 보고서
+│   ├── lgbm_model.joblib    # 완성된 인공지능 모델
+│   ├── final_predictions.csv # 최종 결과값
+│   ├── X_variables_forecasted.csv # 예측된 변수들
+│   └── shap_summary_bar_plot.png # 영향도 분석 그림
+└── plots/                   # 그림 앨범 (시각화 결과물)
+    ├── 1_target_boxplot_distribution.png
+    ├── 2_correlationheatmap... # 데이터들끼리의 관계 그림
+    └── 3_timeseries_trend_area_chart.png # 시간에 따른 변화 그림
+```
+
+<br>
+
 
 
 ## 2️⃣ 분석 결과
