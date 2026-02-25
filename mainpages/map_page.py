@@ -215,13 +215,24 @@ def map_page():
 
     with col_search:
         all_regions = sorted(final_df['sigun_nm'].unique().tolist())
+        search_options = ["선택 안 함"] + all_regions
+        
+        try:
+            current_index = search_options.index(st.session_state.selected_region)
+        except ValueError:
+            current_index = 0
+
         search_region = st.selectbox(
             "🔍 지역 검색",
-            options=["선택 안 함"] + all_regions,
-            index=0
+            options=search_options,
+            index=current_index,
+            key='region_search_box'
         )
+        
         if search_region != "선택 안 함":
             st.session_state.selected_region = search_region
+        else:
+            st.session_state.selected_region = None
 
     # ── 등급 범례 ──
     st.markdown("""
@@ -253,6 +264,17 @@ def map_page():
         st.error("GeoJSON 파일을 찾을 수 없습니다.")
         return
 
+    region_coords = {}
+    for feature in geojson_data['features']:
+        city_name = extract_city_name(feature['properties'].get('source_SIG_KOR_NM', ''))
+        try:
+            coords = feature['geometry']['coordinates'][0][0]
+            if feature['geometry']['type'] == 'MultiPolygon':
+                 coords = feature['geometry']['coordinates'][0][0][0]
+            region_coords[city_name] = [coords[1], coords[0]]
+        except (IndexError, TypeError):
+            continue
+
     sigun_dict = (
         df_year.drop_duplicates(subset=['sigun_nm'])
         .set_index('sigun_nm')[['개선 인구 소멸 지수', '등급']]
@@ -271,7 +293,15 @@ def map_page():
             feature['properties']['등급'] = '데이터 없음'
 
     # ── 지도 생성 ──
-    m = folium.Map(location=[36.5, 127.5], zoom_start=7, tiles="cartodbpositron")
+    map_center = [36.5, 127.5]
+    map_zoom = 7
+    selected_region_name = st.session_state.get('selected_region')
+
+    if selected_region_name and selected_region_name in region_coords:
+        map_center = region_coords[selected_region_name]
+        map_zoom = 9
+
+    m = folium.Map(location=map_center, zoom_start=map_zoom, tiles="cartodbpositron")
 
     folium.Choropleth(
         geo_data=geojson_data,
@@ -314,27 +344,26 @@ def map_page():
     # ── 클릭 이벤트 처리 ──
     popup_data = map_output.get('last_object_clicked_popup')
     if popup_data:
+        region_name_from_map = None
         if isinstance(popup_data, str):
-            region_name = popup_data.replace('지역', '').strip()
-            if region_name:
-                st.session_state.selected_region = region_name
+            region_name_from_map = popup_data.replace('지역', '').strip()
         elif isinstance(popup_data, dict):
-            region_name = popup_data.get('city_nm') or popup_data.get('지역')
-            if region_name:
-                st.session_state.selected_region = region_name
+            region_name_from_map = popup_data.get('city_nm') or popup_data.get('지역')
+        
+        if region_name_from_map and st.session_state.selected_region != region_name_from_map:
+            st.session_state.selected_region = region_name_from_map
 
     # ── SHAP 분석 패널 ──
     if st.session_state.selected_region:
         selected_region = st.session_state.selected_region
         region_data = df_year[df_year["sigun_nm"] == selected_region]
 
-        st.markdown("---")
+        st.markdown("--- ")
         st.markdown(
             f'<div class="section-header">📍 {selected_region} 상세 분석 ({selected_year}년)</div>',
             unsafe_allow_html=True
         )
 
-        # 분석 시작 전 안내 메시지
         status_placeholder = st.empty()
         status_placeholder.info("⏳ SHAP 분석 중입니다. 잠시만 기다려 주세요...")
 
@@ -344,7 +373,6 @@ def map_page():
             color = region_data['색상'].iloc[0]
             emoji = get_grade_emoji(grade)
 
-            # 지표 카드 3개
             c1, c2, c3 = st.columns(3)
             with c1:
                 st.markdown(f"""
@@ -373,12 +401,11 @@ def map_page():
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            # SHAP 차트
             st.markdown('<div class="section-header">🔬 SHAP 변수 영향도 분석</div>',
                         unsafe_allow_html=True)
             st.caption("각 변수가 소멸 지수 예측에 얼마나 영향을 미쳤는지 나타냅니다. 파란색은 위험 감소, 빨간색은 위험 증가 방향입니다.")
             render_shap_chart(model, final_df, selected_year, selected_region, X_train)
-            status_placeholder.empty()  # 분석 완료 후 안내 메시지 제거
+            status_placeholder.empty()
 
         else:
             st.warning(f"'{selected_region}' 데이터를 찾을 수 없습니다.")
