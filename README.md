@@ -4,8 +4,6 @@
 <img width="350" height="350" alt="ChatGPT Image 2026년 2월 24일 오전 10_26_26" src="https://github.com/user-attachments/assets/7f20875c-9ef7-4114-8030-92fe68a25be3" />
 
 
-| 담당자 | 역할 |
-|---|---|
 | 이름 | GitHub | 역할 |
 | :--- | :---: | :--- |
 | 권가영 | [@Gayoung03](https://github.com/Gayoung03) | 데이터 수집 및 전처리, 모델링, streamlit 구현 |
