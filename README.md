@@ -86,12 +86,8 @@
 ## 2️⃣ 분석 결과
 <img width="960" height="540" alt="16" src="https://github.com/user-attachments/assets/4de91cec-d731-4120-b668-fea7dd1ffa3f" />
 <img width="960" height="540" alt="17" src="https://github.com/user-attachments/assets/a4e68255-581f-42a1-a240-30b3b36e7db6" />
-<img width="960" height="540" alt="18" src="https://github.com/user-attachments/assets/4c64caac-6e44-4897-a908-1326367d976c" />
 
-
-## 3️⃣ 대시보드
-
-## 4️⃣ 아쉬운 점 및 향후 개선 방향
+## 3️⃣ 아쉬운 점 및 향후 개선 방향
 1. 데이터 범위: 5개년 연단위 데이터의 한계를 극복하기 위해 분기/월 단위 세밀한 데이터 및 외부 지표 추가 필요.
 2. 모델링 고도화: 예측된 Feature 값으로 미래 Target을 예상하는 현재의 시계열 검증 방식을 고도화하고, 데이터 불균형 대응 및 다른 머신러닝 최적화 기법과의 추가 비교 필요.
 3. 정책 연계 및 시각화: 데이터 전처리 소요 시간으로 인해 미완성된 Streamlit 웹 대시보드를 고도화하여, 실제 지자체의 맞춤형 대응 시나리오에 활용할 수 있도록 발전시킬 계획
