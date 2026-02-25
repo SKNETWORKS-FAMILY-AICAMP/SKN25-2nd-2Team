@@ -77,6 +77,18 @@
   - ![Matplotlib](https://img.shields.io/badge/Matplotlib-%23ffffff.svg?style=for-the-badge&logo=Matplotlib&logoColor=black)
   - ![Seaborn](https://img.shields.io/badge/Seaborn-%234479A1.svg?style=for-the-badge&logo=Seaborn&logoColor=white)
 
+<br>
+
+
+### 데이터출처
+본 프로젝트는 다음과 같은 데이터를 활용하여 구성되었습니다.
+
+<img width="330" height="80" alt="image" src="https://github.com/user-attachments/assets/f892d5ff-16d4-42b1-b1c5-bec3f09a929f" />
+
+
+**KOSIS** 에서 제공한 자료를 활용하였습니다.
+
+
 # 5. 수행결과
 
 ## 1️⃣ ERD
